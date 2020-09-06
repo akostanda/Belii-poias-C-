@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <regex>
+// #include <regex>
 
 using namespace std;
 
@@ -62,18 +62,25 @@ public:
                     return true;
                 }
             }
-            // for (auto it = dateEvent.at(date).begin(); it != dateEvent.at(date).end(); it++) {
-            //     if (event == *it) {
-            //         dateEvent.at(date).erase(it);
-            //         break;
-            //     }
-            // }
         }
         return false;
     }
-    int  DeleteDate(const Date& date);
+    int DeleteDate(const Date& date) {
+        int count = 0;
+        if (dateEvent.count(date) > 0) {
+            for (auto it = dateEvent.at(date).begin(); it != dateEvent.at(date).end(); it++)
+                count++;
+            dateEvent.at(date).clear();
+        }
+        return count;
+    }
 
-    // /* ??? */ Find(const Date& date) const;
+    void Find(const Date& date) const {
+        if (dateEvent.count(date) > 0) {
+            for (auto& s : dateEvent.at(date))
+                cout << s << "\n";
+        }
+    }
 
     void Print() const {
         for (auto& de : dateEvent) {
@@ -111,18 +118,22 @@ void getDate(string& date, int& year, int& month, int& day) {
         dateStr.ignore(1);
         signD = -1;
     }
-    getline(dateStr, number, '-');
+    getline(dateStr, number);
     day = stoi(number) * signD;
-    // cout << year << " " << month << " " << day << endl;
 }
 
 bool isDate(vector<string> coms, int& year, int& month, int& day) {
-    regex regular("((\\-|\\+)?[0-9]{1,4})\\-(\\-?\\+?[0-9]{1,2})\\-(\\-?\\+?[0-9]{1,2})");
-    if (regex_match(coms[1], regular) == false) {
-        cout << "Wrong date format: " << coms[1] << endl;
-        return false;
-    }
-    else {
+    // regex regular("((\\-|\\+)?[0-9]{1,4})\\-(\\-?\\+?[0-9]{1,2})\\-(\\-?\\+?[0-9]{1,2})");
+    // if (regex_match(coms[1], regular) == false) {
+    //     cout << "Wrong date format: " << coms[1] << endl;
+    //     return false;
+    // }
+    try {
+        char def1, def2;
+        stringstream dateStr(coms[1]);
+        dateStr >> year >> def1 >> month >> def2 >> day;
+        if (def1 != '-' || def2 != '-' || !dateStr.eof() || day == -2147483641)
+            throw(1);
         getDate(coms[1], year, month, day);
         if (month < 1 || month > 12) {
             cout << "Month value is invalid: " << month << endl;
@@ -133,16 +144,17 @@ bool isDate(vector<string> coms, int& year, int& month, int& day) {
             return false;
         }
     }
+    catch (...) {
+        cout << "Wrong date format: " << coms[1] << endl;
+        return false;
+    }
     return true;
 }
 
 int main() {
     Database db;
-        
     string command;
-    // stringstream com;
     while (getline(cin, command)) {
-        // cout << command << endl;
         istringstream line(command);
         vector<string> coms;
         while (!line.eof()) {
@@ -152,33 +164,38 @@ int main() {
         }
         int year;
         int month;
-        int day;
+        int day = -2147483641;
         if (coms[0] == "Add") {
-            if (isDate(coms, year, month, day)) {
+            if (isDate(coms, year, month, day) && coms.size() == 3) {
                 Date date(year, month, day);
                 db.AddEvent(date, coms[2]);
             }
         }
         else if (coms[0] == "Del") {
-            if (coms.size() == 3) {
-                if (isDate(coms, year, month, day)) {
-                    Date date(year, month, day);
+            if (isDate(coms, year, month, day)) {
+                Date date(year, month, day);
+                if (coms.size() == 3) {
                     if (db.DeleteEvent(date, coms[2])) 
                         cout << "Deleted successfully" << endl;
                     else
                         cout << "Event not found" << endl;
                 }
+                else {
+                    cout << "Deleted " << db.DeleteDate(date) << " events" << endl;
+                    
+                }
             }
         }
         else if (coms[0] == "Find") {
-            
+            if (isDate(coms, year, month, day) && coms.size() == 2) {
+                Date date(year, month, day);
+                db.Find(date);
+            }
         }
-        else if (coms[0] == "Print") {
+        else if (coms[0] == "Print")
             db.Print();
-        }
-        else
+        else if (coms[0] != "")
             cout << "Unknown command: " << coms[0] << endl;
     }
-
     return 0;
 }
